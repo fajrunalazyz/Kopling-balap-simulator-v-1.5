@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Kopling Balap Simulator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=Barlow:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--ink:#0e1a22;--panel:rgba(9,19,26,.84);--amber:#ffb000;--ok:#4be39a;--bad:#ff5a4d;--text:#e8f0f4;--mut:#8fa6b3;--line:#22343f;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;background:radial-gradient(circle at 72% 22%,#fffbe6 0,#ffe9a8 2.5%,rgba(255,233,168,0) 11%),linear-gradient(180deg,#2f78b8 0%,#7fb7de 28%,#bfe0ef 42%,#bfe0ef 100%);color:var(--text);font-family:Barlow,system-ui,sans-serif}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block}
+.p{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+#lessons{position:fixed;left:10px;top:calc(10px + env(safe-area-inset-top,0px));width:230px;padding:10px 12px}
+h2{font:700 18px 'Barlow Condensed',sans-serif;margin:0 0 6px;letter-spacing:.02em}
+#lessons ol{margin:0;padding-left:20px;font-size:14px;line-height:1.45;color:var(--mut)}
+#lessons li.done{color:var(--ok)}
+#lessons li.done::marker{content:"\2713  "}
+#topr{position:fixed;right:10px;top:calc(10px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+#stats{padding:8px 12px;font-size:14px;line-height:1.5;min-width:170px}
+#stats b{font:700 16px 'Barlow Condensed',sans-serif;color:var(--amber)}
+button{font:600 14px Barlow,sans-serif;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--amber)}
+button:focus-visible,.pedal:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+#engine{font:700 16px 'Barlow Condensed',sans-serif;padding:4px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line)}
+#engine.on{color:var(--ok);border-color:var(--ok)}
+#engine.off{color:var(--bad);border-color:var(--bad)}
+#msg{position:fixed;left:50%;top:22%;transform:translateX(-50%);max-width:min(560px,86vw);text-align:center;font:700 22px 'Barlow Condensed',sans-serif;padding:8px 16px;border-radius:10px;background:var(--panel);opacity:0;transition:opacity .25s;pointer-events:none}
+#msg.show{opacity:1}#msg.bad{color:var(--bad)}#msg.ok{color:var(--ok)}#msg.info{color:var(--text)}
+#dash{position:fixed;left:0;right:0;bottom:0;display:flex;gap:18px;justify-content:center;align-items:flex-end;padding:14px 12px calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,transparent,rgba(6,13,18,.92) 40%)}
+#gauges{width:340px;height:170px}
+#shift{display:flex;flex-direction:column;align-items:center;gap:6px}
+#grid{display:grid;grid-template-columns:repeat(3,46px);gap:6px}
+.gc{height:42px;padding:0;font:700 20px 'Barlow Condensed',sans-serif}
+.gc.act{background:var(--amber);color:#1a1200;border-color:var(--amber)}
+#pedals{display:flex;gap:10px}
+.pedal{width:56px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--mut);text-align:center;touch-action:none;user-select:none}
+.well{position:relative;width:100%;height:112px;background:#0a141b;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.fill{position:absolute;left:0;right:0;top:0;height:0;background:var(--amber)}
+.pedal[data-k=brake] .fill{background:var(--bad)}
+.pedal[data-k=gas] .fill{background:var(--ok)}
+.pedal b{font:700 15px 'Barlow Condensed',sans-serif;color:var(--text)}
+#steer{display:flex;gap:6px}
+#intro{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(6,13,18,.78);padding:16px;overflow:auto}
+#intro .p{max-width:560px;padding:22px 24px}
+#intro h1{font:700 34px 'Barlow Condensed',sans-serif;margin:0 0 8px}
+#intro ol{margin:8px 0 14px;padding-left:20px;line-height:1.5}
+#intro dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0 0 16px;font-size:14px;color:var(--mut)}
+#intro dt{font-weight:600;color:var(--text)}#intro dd{margin:0}
+#intro button{background:var(--amber);color:#1a1200;border-color:var(--amber);font-size:16px;padding:9px 20px}
+@media(max-width:760px){#dash{gap:8px;flex-wrap:wrap}#gauges{width:238px;height:119px}.pedal{width:46px}.well{height:84px}#grid{grid-template-columns:repeat(3,38px)}.gc{height:34px}#lessons{width:176px;font-size:12px;padding:8px}#lessons ol{font-size:12px}#msg{font-size:18px;top:30%}}
+#menu,#result{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(6,13,18,.9);padding:16px;overflow:auto;z-index:5}
+#menu .p,#result .p{max-width:520px;width:100%;padding:22px 24px}
+#menu h1,#result h1{font:700 36px 'Barlow Condensed',sans-serif;margin:0 0 4px}
+#menu p,#result p{margin:0 0 10px;color:var(--mut)}
+.mb{display:block;width:100%;text-align:left;margin:8px 0;padding:12px 16px;border-radius:10px}
+.mb b{display:block;font:700 24px 'Barlow Condensed',sans-serif;color:var(--amber)}
+.mb span{font-size:14px;color:var(--mut);font-weight:400}
+#result .row{display:flex;gap:10px;margin-top:14px}
+#hint{margin:8px 0 0;font-size:13px;line-height:1.4;color:var(--amber)}
+#fx{position:fixed;inset:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.6));opacity:0}
+.bar{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:min(420px,70vw)}
+#menu{align-items:flex-start}#menu .p{margin:auto}
+#sky,#stars{position:fixed;inset:0;pointer-events:none}#stars{bottom:auto;height:42%;opacity:0;background-repeat:no-repeat}
+#gear{width:38px;height:38px;padding:0;font-size:20px;line-height:1}
+#settings{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:6;width:min(360px,90vw);max-height:90vh;overflow:auto;padding:16px}
+#settings .bar{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:none;justify-content:stretch}
+#settings button{padding:10px 12px}
+#bx{margin-top:12px;width:100%;background:var(--amber);color:#1a1200;border-color:var(--amber);padding:10px 12px}
+#cars{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.cb{text-align:left;padding:8px 10px}.cb.sel{border-color:var(--amber);background:rgba(255,176,0,.14)}
+.cb b{font:700 18px 'Barlow Condensed',sans-serif;display:block}.cb small{display:block;color:var(--mut);font-size:12px;font-weight:400;line-height:1.35}
+.gc{transition:transform .18s cubic-bezier(.3,1.6,.5,1),background .12s}.gc.act{transform:scale(1.14)}
+</style>
+</head>
+<body>
+<div id="sky"></div><div id="stars"></div><canvas id="c"></canvas><div id="fx"></div>
+<aside id="lessons" class="p"><h2>Latihan</h2>
+<ol><li>Nyalakan mesin</li><li>Jalan di gigi 1 (di atas 5 km/jam)</li><li>Pindah ke gigi 2 (di atas 15 km/jam)</li><li>Pindah ke gigi 3 (di atas 30 km/jam)</li><li>Berhenti total dan masuk netral</li><li>Dahului 1 mobil lewat lajur kanan dengan aman</li></ol><p id="hint"></p></aside>
+<div id="topr">
+<div id="engine" class="off">Mesin mati</div>
+<div id="stats" class="p">Batas kecepatan: <b id="sLim">60</b> km/jam<br>Menyalip: <b id="sOver">0</b><br>Tabrakan: <b id="sHit">0</b><br>Pelanggaran: <b id="sViol">0</b><br>Mesin mati: <b id="sStall">0</b><br>Gigi nggerinding: <b id="sGrind">0</b><br>Pindah gigi: <b id="sShift">0</b></div>
+<div id="steer"><button id="bl" aria-label="Belok kiri">&#9664;</button><button id="br" aria-label="Belok kanan">&#9654;</button></div>
+<button id="gear" aria-label="Pengaturan" title="Pengaturan (Esc)">&#9881;</button>
+<div id="settings" class="p" style="display:none"><h2>Pengaturan (Esc)</h2><div class="bar"><button id="bc">Kamera (C)</button> <button id="bst">Statistik: tampil</button> <button id="bt">Waktu: otomatis</button> <button id="bq">Grafis: tinggi</button> <button id="bk">Getar: nyala</button> <button id="bm">Menu</button> <button id="bh">Panduan</button> <button id="bs">Suara: nyala</button> <button id="bz">Ulangi</button></div><button id="bx">Lanjutkan</button></div>
+</div>
+<div id="msg"></div>
+<footer id="dash">
+<canvas id="gauges" width="680" height="340"></canvas>
+<div id="shift"><div id="grid"></div><button class="gc" id="gn" style="width:100%">N</button></div>
+<div id="pedals">
+<div class="pedal" data-k="clutch" tabindex="0"><div class="well"><div class="fill"></div></div><b>Kopling</b>Shift</div>
+<div class="pedal" data-k="brake" tabindex="0"><div class="well"><div class="fill"></div></div><b>Rem</b>S / Spasi</div>
+<div class="pedal" data-k="gas" tabindex="0"><div class="well"><div class="fill"></div></div><b>Gas</b>W</div>
+</div>
+</footer>
+<div id="intro" style="display:none"><div class="p">
+<h1>Kopling Balap Simulator</h1>
+<p>Latihan menjalankan mobil manual: kopling, gas, persneling, dan RPM.</p>
+<ol><li>Tahan Shift (kopling), lalu tekan E untuk menyalakan mesin.</li><li>Masuk gigi 1 dengan menekan tombol 1.</li><li>Tekan W sedikit, lepas Shift pelan-pelan sampai mobil mulai jalan.</li><li>Di sekitar 3000 RPM, injak kopling, pindah ke gigi berikutnya, lepas kopling lagi.</li></ol>
+<dl><dt>Shift</dt><dd>Kopling (tahan). X menahan setengah kopling</dd><dt>W / S, Spasi</dt><dd>Gas / rem</dd><dt>A / D</dt><dd>Belok kiri / kanan. Jalan dua arah, lajur kiri milikmu. Menyalip lewat lajur kanan, awas mobil dari depan dan marka kuning</dd><dt>0, 1 sampai 5, R</dt><dd>Netral, gigi maju, mundur</dd><dt>E</dt><dd>Starter mesin</dd><dt>C</dt><dd>Ganti kamera (belakang atau kap mobil)</dd><dt>Layar sentuh</dt><dd>Geser pedal ke bawah, ketuk tuas persneling</dd></dl>
+<button id="go">Mulai berlatih</button></div></div>
+<div id="menu"><div class="p"><h1>Kopling Balap Simulator</h1><p>Pilih mode permainan</p>
+<div id="mmain">
+<button class="mb" data-m="free"><b>Freeroam</b><span>Berkendara bebas di jalan dua arah dengan lalu lintas, tanpa target.</span></button>
+<button class="mb" data-m="learn"><b>Belajar</b><span>Latihan langkah demi langkah: starter, kopling, pindah gigi, berhenti, dan menyalip.</span></button>
+<button class="mb" data-m="quest"><b>Quest</b><span>Misi dengan target, batas waktu, dan syarat tanpa pelanggaran.</span></button>
+<h2 style="margin:14px 0 6px">Pilih mobil</h2><div id="cars"></div></div><div id="qlist" style="display:none"></div></div></div>
+<div id="result" style="display:none"><div class="p"><h1 id="rt"></h1><p id="rx"></p><div class="row"><button id="rr">Ulangi</button><button id="rm">Menu utama</button></div></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const renderer=new THREE.WebGLRenderer({canvas:$('#c'),antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const scene=new THREE.Scene();scene.fog=new THREE.Fog(0xbfe0ef,40,260);
+const cam=new THREE.PerspectiveCamera(60,1,.5,1200);
+scene.add(new THREE.HemisphereLight(0xddeeff,0x4a5a44,1.05));
+const sun=new THREE.DirectionalLight(0xffd9a0,.8);sun.position.set(-20,30,10);scene.add(sun);
+const M=c=>new THREE.MeshLambertMaterial({color:c});
+const flat=(w,h,c,y)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),M(c));m.rotation.x=-Math.PI/2;m.position.y=y;scene.add(m);return m;};
+const C=z=>18*Math.sin(z/110)+5*Math.sin(z/43+1.3),Cp=z=>18/110*Math.cos(z/110)+5/43*Math.cos(z/43+1.3),C2=z=>-18/12100*Math.sin(z/110)-5/1849*Math.sin(z/43+1.3);
+function rib(w,N,col){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(new Float32Array((N+1)*6),3));
+const nr=new Float32Array((N+1)*6);for(let i=0;i<=N*2+1;i++)nr[i*3+1]=1;g.setAttribute('normal',new THREE.BufferAttribute(nr,3));
+const ix=[];for(let i=0;i<N;i++){const a=2*i;ix.push(a,a+1,a+2,a+1,a+3,a+2);}g.setIndex(ix);
+const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:col,side:THREE.DoubleSide}));m.frustumCulled=false;m.userData.w=w;m.userData.N=N;scene.add(m);return m;}
+function setRib(m,xo,z0,z1,y){const N=m.userData.N,w=m.userData.w/2,p=m.geometry.attributes.position.array;for(let i=0;i<=N;i++){const z=z0+(z1-z0)*i/N,c=C(z)+xo;p.set([c-w,y,z,c+w,y,z],i*6);}m.geometry.attributes.position.needsUpdate=true;}
+const ground=flat(400,600,0x4a8a4f,0),road=rib(10,85,0x2b2f36);
+const edges=[-4.6,4.6,-6.3,6.3].map((x,i)=>{const m=rib(i<2?.2:2.4,85,i<2?0xe8f0f4:0x6b7075);m.userData.x=x;m.userData.y=i<2?.04:.05;return m;});
+const dashes=[],posts=[],trees=[];
+for(let i=0;i<44;i++){const m=flat(.2,3,0xffb000,.04);m.rotation.order='YXZ';dashes.push(m);}
+for(let i=0;i<30;i++)for(const s of[-1,1]){const p=new THREE.Mesh(new THREE.BoxGeometry(.2,2.4,.2),M(0xaab7be));scene.add(p);posts.push([p,s,i]);}
+for(let i=0;i<26;i++)for(const s of[-1,1]){const t=new THREE.Group(),h=3+((i*7+(s>0?3:0))%4);
+const tr=new THREE.Mesh(new THREE.CylinderGeometry(.2,.3,1,6),M(0x4a3a2c));tr.position.y=.5;
+const cn=new THREE.Mesh(new THREE.ConeGeometry(1.4,h,7),M(0x2d6a4f));cn.position.y=1+h/2;
+t.add(tr,cn);scene.add(t);trees.push([t,s,i]);}
+const car=new THREE.Group();scene.add(car);
+const body=new THREE.Mesh(new THREE.BoxGeometry(1.8,.6,4.2),M(0xffb000));body.position.y=.65;
+const cab=new THREE.Mesh(new THREE.BoxGeometry(1.5,.55,2),M(0x12303d));cab.position.set(0,1.2,.3);
+car.add(body,cab);
+const tl=[-.6,.6].map(x=>{const m=new THREE.Mesh(new THREE.BoxGeometry(.4,.15,.05),new THREE.MeshBasicMaterial({color:0x5a1511}));m.position.set(x,.8,2.11);car.add(m);return m;});
+const wh=[];for(const[x,z]of[[-.95,1.3],[.95,1.3],[-.95,-1.3],[.95,-1.3]]){const pv=new THREE.Group();pv.position.set(x,.33,z);
+const w=new THREE.Mesh(new THREE.CylinderGeometry(.33,.33,.25,14),M(0x15191d));w.rotation.z=Math.PI/2;
+const hub=new THREE.Mesh(new THREE.BoxGeometry(.27,.1,.1),M(0xe8f0f4));hub.position.y=.2;pv.add(w,hub);car.add(pv);wh.push(pv);}
+
+const RATIO={'-1':-3.3,0:0,1:3.6,2:2.1,3:1.4,4:1.0,5:.82},RW=.3;let CP={mass:1100,tq:260,drag:.55,brk:9500,fd:3.9,vmax:200,vs:20,rw:.33,hw:.9,hl:2.1,cy:3.2,cz:7.5,ch:1.45};
+let S,gas,brake,clutch,prevC,shake=0,running=false,muted=false,msgT=0,lugT=0;
+const keys={},ptr={gas:null,brake:null,clutch:null};
+function reset(){S={on:false,rpm:0,v:0,z:0,x:-2.5,gear:0,started:false,stalls:0,shifts:0,grinds:0,rel:0,pitch:0,yaw:0,hits:0,viol:0,over:0,sp:0,cool:0,vcool:0,needNpc:true,done:[0,0,0,0,0,0]};gas=brake=clutch=prevC=0;}
+reset();
+function msg(t,c){const m=$('#msg');m.textContent=t;m.className='show '+(c||'info');clearTimeout(msgT);msgT=setTimeout(()=>m.className='',2800);}
+
+let ac,osc,og;
+function audioInit(){if(ac)return;try{ac=new(window.AudioContext||window.webkitAudioContext)();osc=ac.createOscillator();osc.type='sawtooth';const f=ac.createBiquadFilter();f.type='lowpass';f.frequency.value=500;og=ac.createGain();og.gain.value=0;osc.connect(f);f.connect(og);og.connect(ac.destination);osc.start();}catch(e){}}
+function grind(){if(!ac||muted)return;const o=ac.createOscillator(),g=ac.createGain();o.type='square';o.frequency.value=90;g.gain.setValueAtTime(.08,ac.currentTime);g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.3);o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.3);}
+
+function setGear(g){if(g===S.gear)return;
+if(g!==0&&clutch<.7){S.grinds++;msg('Kopling belum diinjak penuh: gigi nggerinding!','bad');shake=.6;grind();return;}
+if(g===-1&&Math.abs(S.v)>1){msg('Berhenti dulu sebelum masuk gigi mundur.','bad');return;}
+S.gear=g;S.shifts++;}
+function start(){if(S.on)return msg('Mesin sudah hidup.');
+if(S.gear!==0&&clutch<.7)return msg('Injak kopling atau masuk netral dulu.','bad');
+S.on=true;S.rpm=900;S.started=true;msg('Mesin hidup.','ok');}
+
+function step(dt){
+const kb=k=>keys[k]?1:0;
+const gT=ptr.gas??Math.max(kb('w'),kb('arrowup')),bT=ptr.brake??Math.max(kb('s'),kb('arrowdown'),kb(' '));
+gas+=(gT-gas)*Math.min(1,dt*(gT>gas?7:10));brake+=(bT-brake)*Math.min(1,dt*10);
+if(ptr.clutch!==null)clutch=ptr.clutch;
+else{const cT=(keys.shift||keys.z)?1:keys.x?.42:0,rate=cT>clutch?7:.85;clutch+=Math.sign(cT-clutch)*Math.min(Math.abs(cT-clutch),rate*dt);}
+S.rel+=(Math.max(0,(prevC-clutch)/dt)-S.rel)*Math.min(1,dt*10);prevC=clutch;
+const t0=clamp((clutch-.25)/.5,0,1),eng=1-t0*t0*(3-2*t0);
+const r=RATIO[S.gear]*CP.fd,coupled=S.gear===0?0:eng;
+const wr=Math.abs(S.v)/(2*Math.PI*RW)*60*Math.abs(r);
+let F=0;
+if(S.on){
+const free=900+gas*5800;let t=free*(1-coupled)+wr*coupled;
+if(coupled>.05){
+if(gas>.2)t=Math.max(t,free*(.5+.5*(1-coupled)),wr);
+else if(S.rel<2.2&&!(coupled>.8&&wr<550&&S.gear>=2))t=Math.max(t,820);}
+S.rpm+=(t-S.rpm)*Math.min(1,dt*(coupled>.3?10:6));S.rpm=Math.min(S.rpm,7600);
+const tc=Math.max(.15,1-Math.pow((S.rpm-3800)/4200,2)*.7);
+let T=gas*CP.tq*tc;
+if(gas<.2)T+=wr<700?16*(1-wr/700)*(1-gas/.2):-(S.rpm/3000)*35*(1-gas/.2);
+if(S.rpm>6900){T=-80;if(coupled>.5&&lugT<=0){msg('RPM terlalu tinggi! Naikkan gigi atau lepas gas.','bad');lugT=3;}}
+const cp=7000*CP.tq/260*coupled;F=clamp(T*r/RW*.88,-cp,cp);
+if(coupled>.8&&gas>.2&&wr<1000&&S.gear>=3){F*=Math.max(.15,wr/1000);if(lugT<=0){msg('Gigi terlalu tinggi, mesin berat. Turunkan gigi.','info');lugT=4;}}
+if(S.rpm<500&&coupled>.5){S.on=false;S.stalls++;shake=1;msg('Mesin mati! Injak kopling, masuk netral, tekan E.','bad');}
+}else{S.rpm+=(0-S.rpm)*Math.min(1,dt*8);F=-Math.sign(S.v)*3000*coupled;}
+lugT-=dt;
+const off=Math.abs(S.x)>5?1:0;
+const res=CP.drag*S.v*Math.abs(S.v)+140*CP.mass/1100*Math.tanh(S.v*3)+CP.brk*brake*Math.tanh(S.v*4)+off*1800*CP.mass/1100*Math.tanh(S.v*2);
+let nv=S.v+(F-res)/CP.mass*dt;
+if(S.v!==0&&Math.sign(nv)!==Math.sign(S.v)&&Math.abs(F)<Math.abs(res)+1)nv=0;
+if(brake>.1&&Math.abs(nv)<.2&&Math.abs(F)<CP.brk*brake)nv=0;
+if(Math.abs(nv)<.02&&Math.abs(F)<140)nv=0;
+const acc=(nv-S.v)/dt;S.v=nv;S.z-=S.v*dt;
+const st=(keys.d||keys.arrowright?1:0)-(keys.a||keys.arrowleft?1:0);
+S.x=clamp(S.x+st*dt*3.5*clamp(Math.abs(S.v)/3,0,1)-C2(S.z)*S.v*Math.abs(S.v)*.5*dt,-6,6);
+S.yaw+=(-st*.15*clamp(Math.abs(S.v)/3,0,1)-S.yaw)*Math.min(1,dt*6);
+S.pitch+=(clamp(acc*.006,-.05,.05)-S.pitch)*Math.min(1,dt*6);
+const kmh=Math.abs(S.v)*3.6,d=S.done;
+const L=mode==='learn';if(L&&S.started)d[0]=1;
+if(L&&S.gear===1&&kmh>5)d[1]=1;
+if(L&&S.gear===2&&kmh>15)d[2]=1;
+if(L&&S.gear===3&&kmh>30)d[3]=1;
+if(L&&d[3]&&kmh<1&&S.gear===0&&S.on&&!d[4]){d[4]=1;msg('Berhenti dengan benar. Sekarang coba menyalip!','ok');}
+if(L&&S.over>=1&&!d[5]){d[5]=1;msg('Menyalip berhasil!','ok');}
+world(dt,kmh);wh.forEach(w=>w.rotation.x-=S.v*dt/CP.rw);
+if(og)og.gain.value=(!muted&&S.on)?.04+gas*.05:0;
+if(osc)osc.frequency.value=Math.max(20,S.rpm/60*2);
+}
+
+const CYC=600,COL=[0x4b8bbe,0xd04a4a,0xe8f0f4,0x6d9f5b,0x9a7bd0,0x2e3b45,0xe0e0a0,0xc47a3a],npcs=[];
+const mz=z=>(((-z)%CYC)+CYC)%CYC,inNoOv=z=>mz(z)>=300&&mz(z)<450,limitAt=z=>mz(z)>=300?40:60;
+function mkCar(c){const g=new THREE.Group();const b=new THREE.Mesh(new THREE.BoxGeometry(1.8,.6,4.2),M(c));b.position.y=.65;const k=new THREE.Mesh(new THREE.BoxGeometry(1.5,.55,2),M(0x12303d));k.position.set(0,1.2,.3);g.add(b,k);
+[[-.6,-2.11,0xfff2b0],[.6,-2.11,0xfff2b0],[-.6,2.11,0xd33a2c],[.6,2.11,0xd33a2c]].forEach(([x,z,col])=>{const m=new THREE.Mesh(new THREE.BoxGeometry(.4,.15,.05),new THREE.MeshBasicMaterial({color:col}));m.position.set(x,.8,z);g.add(m);});
+for(const[x,z]of[[-.95,1.3],[.95,1.3],[-.95,-1.3],[.95,-1.3]]){const w=new THREE.Mesh(new THREE.CylinderGeometry(.33,.33,.25,12),M(0x15191d));w.rotation.z=Math.PI/2;w.position.set(x,.33,z);g.add(w);}
+g.traverse(o=>{o.castShadow=true;});scene.add(g);return g;}
+function place(n){let z,t=0;do{z=S.z-90-Math.random()*260;t++;}while(t<8&&npcs.some(o=>o!==n&&o.lane===n.lane&&Math.abs(o.z-z)<35));
+n.z=z;n.v=n.dir<0?8+Math.random()*2:11+Math.random()*5;n.stun=0;n.pass=false;}
+function initNpcs(){if(!npcs.length)for(let i=0;i<9;i++){const on=i>=6,g=mkNpc(COL[i%COL.length],i);if(on)g.rotation.y=Math.PI;npcs.push({g,dir:on?1:-1,lane:on?2.5:-2.5,z:1e9,v:0,stun:0,pass:false});}
+npcs.forEach(n=>n.z=1e9);npcs.forEach(place);}
+function signTex(t){const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d');
+g.fillStyle='#fff';g.beginPath();g.arc(64,64,60,0,7);g.fill();g.strokeStyle='#d9322b';g.lineWidth=12;g.beginPath();g.arc(64,64,54,0,7);g.stroke();
+if(t==='no'){g.fillStyle='#d9322b';g.fillRect(24,50,36,24);g.fillRect(34,40,16,12);g.fillStyle='#222';g.fillRect(68,50,36,24);g.fillRect(78,40,16,12);}
+else{g.fillStyle='#111';g.font='bold 58px Arial,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(t,64,68);}
+return new THREE.CanvasTexture(c);}
+const signs=[{m:20,t:'60'},{m:270,t:'no'},{m:300,t:'40'}].map(s=>{const g=new THREE.Group();const p=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,2.8,6),M(0xaab7be));p.position.y=1.4;
+const pl=new THREE.Mesh(new THREE.PlaneGeometry(1.5,1.5),new THREE.MeshBasicMaterial({map:signTex(s.t),transparent:true,alphaTest:.5,side:THREE.DoubleSide}));pl.position.y=3;g.add(p,pl);g.position.y=-100;scene.add(g);s.g=g;return s;});
+const solid=[-.18,.18].map(x=>{const m=rib(.15,40,0xffcc00);m.userData.x=x;return m;});
+function world(dt,kmh){
+if(S.needNpc){initNpcs();S.needNpc=false;}
+S.cool-=dt;S.vcool-=dt;
+for(const n of npcs){const sp=n.stun>0?0:n.v;n.stun-=dt;n.z+=n.dir*sp*dt;
+if(n.z>S.z+40||n.z<S.z-(n.dir<0?330:450))place(n);
+n.g.position.set(C(n.z)+n.lane,0,n.z);n.g.rotation.y=(n.dir>0?Math.PI:0)+Math.atan(Cp(n.z));
+if(!n.pass&&n.dir<0&&S.z<n.z-4){n.pass=true;S.over++;}
+const dz=n.z-S.z;
+if(Math.abs(n.lane-S.x)<CP.hw+.9&&Math.abs(dz)<CP.hl+2.2){
+if(S.cool<=0){S.hits++;S.cool=1.5;shake=1;hs=.09;thud();n.stun=2;msg('Tabrakan! Jaga jarak dan cek lajur sebelum menyalip.','bad');}
+if((S.v>0&&dz<0)||(S.v<0&&dz>0))S.v*=.2;}}
+if(inNoOv(S.z)&&S.x>-.6&&S.vcool<=0&&kmh>3){S.viol++;S.vcool=4;msg('Pelanggaran: marka kuning, dilarang menyalip di sini!','bad');}
+const lim=limitAt(S.z);
+if(kmh>lim+5){S.sp+=dt;if(S.sp>2){S.viol++;S.sp=-4;msg('Melebihi batas kecepatan '+lim+' km/jam!','bad');}}else if(S.sp>0)S.sp=0;
+const d=-S.z;
+signs.forEach(s=>{const k=Math.round((d-s.m)/CYC),sz=-(k*CYC+s.m);s.g.position.set(C(sz)-6.4,0,sz);s.g.rotation.y=Math.atan(Cp(sz));});
+const k2=Math.round((d-375)/CYC),zc=-(k2*CYC+375);solid.forEach(m=>setRib(m,m.userData.x,zc+75,zc-75,.045));
+$('#sLim').textContent=lim;modeTick(dt,kmh);}
+let mode='free',qi=0;
+const LES=['Nyalakan mesin','Jalan di gigi 1 (di atas 5 km/jam)','Pindah ke gigi 2 (di atas 15 km/jam)','Pindah ke gigi 3 (di atas 30 km/jam)','Berhenti total dan masuk netral','Dahului 1 mobil lewat lajur kanan dengan aman'];
+const HINT=['Tahan Shift (kopling) lalu tekan E untuk starter.','Kopling tetap diinjak, tekan 1. Tekan W sedikit lalu lepas Shift pelan-pelan sampai mobil jalan.','Injak kopling, tekan 2, lepas kopling pelan sambil tambah gas. Capai 15 km/jam.','Sekitar 3000 RPM: injak kopling, tekan 3, lepas pelan. Capai 30 km/jam.','Lepas gas, rem pelan, injak kopling, lalu tekan 0 setelah berhenti.','Pastikan lajur kanan kosong, tekan D untuk menyalip mobil di depan, lalu A kembali ke kiri.'];
+const QS=[
+{n:'Start Pertama',d:'Jalankan mobil tanpa mesin mati.',time:150,objs:['Nyalakan mesin','Tempuh 300 m tanpa mesin mati','Berhenti total dan masuk netral'],test:(S,k)=>[S.started,S.dmax>=300&&S.stalls===0,S.dmax>=300&&k<1&&S.gear===0&&S.on],fail:S=>S.stalls>0?'Mesin mati, quest gagal.':null},
+{n:'Salip Aman',d:'Dahului 3 mobil tanpa tabrakan.',time:180,objs:['Dahului 3 mobil','Tanpa tabrakan','Maksimal 1 pelanggaran'],test:S=>[S.over>=3,S.hits===0,S.viol<=1],fail:S=>S.hits>0?'Terjadi tabrakan, quest gagal.':S.viol>1?'Terlalu banyak pelanggaran.':null},
+{n:'Patuhi Rambu',d:'Tempuh 900 m sesuai aturan, lewati zona dilarang menyalip.',time:240,objs:['Capai gigi 4','Tempuh 900 m','Nol pelanggaran dan tabrakan'],test:S=>[!!S.g4,S.dmax>=900,S.viol===0&&S.hits===0],fail:S=>S.viol>0||S.hits>0?'Melanggar aturan, quest gagal.':null}];
+function setList(t,items){$('#lessons h2').textContent=t;$('#lessons ol').innerHTML=items.map(x=>'<li>'+x+'</li>').join('');lis=[...document.querySelectorAll('#lessons li')];}
+function finish(ok,t,x){running=false;$('#rt').textContent=t;$('#rt').style.color=ok?'var(--ok)':'var(--bad)';$('#rx').textContent=x;$('#result').style.display='flex';}
+function showMenu(){running=false;['#result','#intro'].forEach(s=>$(s).style.display='none');$('#menu').style.display='flex';$('#qlist').style.display='none';$('#mmain').style.display='block';}
+function startMode(m,i){mode=m;qi=i||0;reset();setCar(selCar);['#menu','#result','#intro'].forEach(s=>$(s).style.display='none');
+$('#lessons').style.display=m==='free'?'none':'block';$('#hint').textContent='';
+if(m==='learn')setList('Belajar',LES);else if(m==='quest')setList('Quest: '+QS[qi].n,QS[qi].objs);
+running=true;audioInit();
+msg(m==='free'?'Freeroam: berkendara bebas. Tekan E untuk starter.':m==='learn'?'Ikuti petunjuk di panel kiri atas.':QS[qi].d,'info');}
+function modeTick(dt,kmh){S.dmax=Math.max(S.dmax||0,-S.z);if(S.gear===4)S.g4=true;
+if(mode==='learn'){const i=S.done.findIndex(x=>!x);$('#hint').textContent=i<0?'':'Langkah '+(i+1)+': '+HINT[i];
+if(i<0&&!S.fin){S.fin=1;finish(true,'Belajar selesai','Kamu sudah menguasai starter, pindah gigi, berhenti, dan menyalip. Coba Quest atau Freeroam.');}}
+else if(mode==='quest'){const q=QS[qi];S.t=(S.t||0)+dt;const r=q.test(S,kmh);r.forEach((v,i)=>S.done[i]=v?1:0);
+const f=q.fail(S)||(S.t>q.time?'Waktu habis.':null);
+$('#hint').textContent='Sisa waktu '+Math.max(0,Math.ceil(q.time-S.t))+' dtk. Jarak '+Math.round(S.dmax)+' m.';
+if(!S.fin&&f){S.fin=1;finish(false,'Quest gagal',f);}
+else if(!S.fin&&r.every(Boolean)){S.fin=1;{const st=Math.max(1,3-(S.viol>0)-(S.stalls>0)-(S.grinds>1));finish(true,'Quest selesai','Nilai '+'★'.repeat(st)+'☆'.repeat(3-st)+'. Selesai dalam '+Math.round(S.t)+' detik. Tabrakan '+S.hits+', pelanggaran '+S.viol+'.');}}}}
+document.querySelectorAll('.mb[data-m]').forEach(b=>b.onclick=()=>{audioInit();const m=b.dataset.m;if(m==='quest'){$('#mmain').style.display='none';$('#qlist').style.display='block';}else startMode(m);});
+$('#qlist').innerHTML=QS.map((q,i)=>'<button class="mb" data-q="'+i+'"><b>'+(i+1)+'. '+q.n+'</b><span>'+q.d+' Batas waktu '+q.time+' detik.</span></button>').join('')+'<button id="qb">Kembali</button>';
+document.querySelectorAll('.mb[data-q]').forEach(b=>b.onclick=()=>startMode('quest',+b.dataset.q));
+$('#qb').onclick=showMenu;$('#rr').onclick=()=>startMode(mode,qi);$('#rm').onclick=showMenu;
+let hs=0,camMode=0,camX=-2,reduce=false;const fxEl=$('#fx');
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+sun.intensity=1.1;sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.bias=-.0004;
+{const sc=sun.shadow.camera;sc.left=-16;sc.right=16;sc.top=32;sc.bottom=-32;sc.near=1;sc.far=90;}
+scene.add(sun.target);ground.receiveShadow=road.receiveShadow=true;car.traverse(o=>{o.castShadow=true;});
+function thud(){if(!ac||muted)return;const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime;o.type='sine';o.frequency.setValueAtTime(120,t);o.frequency.exponentialRampToValueAtTime(40,t+.25);g.gain.setValueAtTime(.2,t);g.gain.exponentialRampToValueAtTime(.001,t+.3);o.connect(g);g.connect(ac.destination);o.start();o.stop(t+.3);}
+$('#bc').onclick=()=>{camMode^=1;};$('#bk').onclick=e=>{reduce=!reduce;e.target.textContent='Getar: '+(reduce?'mati':'nyala');};
+const CARS=[
+{n:'Sedan',d:'Seimbang, cocok untuk belajar.',col:0xffb000,sp:3,tr:3,mass:1100,tq:260,drag:.55,brk:9500,fd:3.9,vmax:200,vs:20,rw:.33,hw:.9,hl:2.1,cy:3.2,cz:7.5,ch:1.45,b:[1.8,.6,4.2,.65],c:[1.5,.55,2,.3,1.2],w:[[-.95,1.3],[.95,1.3],[-.95,-1.3],[.95,-1.3]]},
+{n:'Pickup',d:'Kuat dan stabil, agak berat.',col:0x3b7a57,sp:2,tr:4,mass:1900,tq:340,drag:1.1,brk:9800,fd:4.2,vmax:200,vs:20,rw:.4,hw:1,hl:2.5,cy:3.6,cz:8.2,ch:1.75,b:[2,.7,4.9,.85],c:[1.7,.7,1.6,-.9,1.4],x:[[1.9,.55,1.9,0,1.1,1.45,0x24442f]],w:[[-1,1.6],[1,1.6],[-1,-1.6],[1,-1.6]]},
+{n:'Truk',d:'Sangat berat, butuh gigi rendah.',col:0x2c6dbf,cc:0x2c6dbf,sp:1,tr:5,mass:6500,tq:520,drag:3.2,brk:12000,fd:5,vmax:160,vs:20,rw:.5,hw:1.2,hl:4.2,cy:4.8,cz:11,ch:2.7,b:[2.3,.6,8.4,.9],c:[2.3,1.7,1.9,-3.1,1.95],x:[[2.4,2.6,5,0,2.5,1.4,0xeeeeee],[2,.7,.05,0,2.4,-4.06,0x12303d]],w:[[-1.1,-3],[1.1,-3],[-1.1,1.2],[1.1,1.2],[-1.1,2.8],[1.1,2.8]]},
+{n:'Mobil sport',d:'Cepat dan responsif.',col:0xd63a2f,sp:4,tr:4,mass:1300,tq:380,drag:.5,brk:11500,fd:3.4,vmax:240,vs:40,rw:.34,hw:.95,hl:2.2,cy:3,cz:7.2,ch:1.2,b:[1.9,.5,4.4,.55],c:[1.4,.4,1.8,.3,1],x:[[1.7,.08,.5,0,1.05,2,0x111111]],w:[[-.98,1.4],[.98,1.4],[-.98,-1.4],[.98,-1.4]]},
+{n:'Hypercar',d:'Sangat cepat, sulit dikendalikan.',col:0x1e90ff,sp:5,tr:5,mass:1450,tq:650,drag:.46,brk:14000,fd:3,vmax:360,vs:60,rw:.35,hw:1,hl:2.3,cy:2.9,cz:7,ch:1.1,b:[2,.45,4.6,.5],c:[1.3,.35,1.6,.2,.88],x:[[2.1,.06,.6,0,1.1,2.2,0x111111],[2.1,.05,.5,0,.2,-2.3,0x111111]],w:[[-1,1.45],[1,1.45],[-1,-1.45],[1,-1.45]]}];
+let selCar=0;car.rotation.order='YXZ';
+function buildInto(g,s,c){const add=(w,h,l,x,y,z,col)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,l),M(col));m.position.set(x,y,z);g.add(m);};
+add(s.b[0],s.b[1],s.b[2],0,s.b[3],0,c);add(s.c[0],s.c[1],s.c[2],0,s.c[4],s.c[3],s.cc||0x12303d);
+(s.x||[]).forEach(e=>add(e[0],e[1],e[2],e[3],e[4],e[5],e[6]==null?c:e[6]));
+const hl=s.b[2]/2+.01,ly=s.b[3]+.15,hw=s.b[0]/3,lights=[],wheels=[];
+[[-hw,-hl,0xfff2b0],[hw,-hl,0xfff2b0],[-hw,hl,0xd33a2c],[hw,hl,0xd33a2c]].forEach(([x,z,col])=>{const m=new THREE.Mesh(new THREE.BoxGeometry(.4,.15,.05),new THREE.MeshBasicMaterial({color:col}));m.position.set(x,ly,z);g.add(m);if(z>0)lights.push(m);});
+s.w.forEach(([x,z])=>{const pv=new THREE.Group();pv.position.set(x,s.rw,z);const w=new THREE.Mesh(new THREE.CylinderGeometry(s.rw,s.rw,.28,14),M(0x15191d));w.rotation.z=Math.PI/2;const hub=new THREE.Mesh(new THREE.BoxGeometry(.3,.1,.1),M(0xe8f0f4));hub.position.y=s.rw*.65;pv.add(w,hub);g.add(pv);wheels.push(pv);});
+return{lights,wheels};}
+function mkNpc(c,i){const g=new THREE.Group();buildInto2(g,CARS[i%4===3?1:0],c,true);g.traverse(o=>{o.castShadow=true;});scene.add(g);return g;}
+function setCar(i){selCar=i;const s=CARS[i];Object.assign(CP,s);while(car.children.length)car.remove(car.children[0]);tl.length=0;wh.length=0;const r=buildInto2(car,s,s.col,false);tl.push(...r.lights);wh.push(...r.wheels);car.traverse(o=>{o.castShadow=true;});}
+const bar=n=>'\u25a0'.repeat(n)+'\u25a1'.repeat(5-n);
+$('#cars').innerHTML=CARS.map((s,i)=>'<button class="cb" data-c="'+i+'"><b>'+s.n+'</b><small>'+s.d+'</small><small>Kecepatan '+bar(s.sp)+'<br>Tenaga '+bar(s.tr)+'</small></button>').join('');
+const cbs=[...document.querySelectorAll('.cb')];
+cbs.forEach(b=>b.onclick=()=>{selCar=+b.dataset.c;cbs.forEach(x=>x.classList.toggle('sel',x===b));});
+cbs[0].classList.add('sel');
+const isUrban=z=>(((-z)%1400)+1400)%1400>=600;
+const wtex=(()=>{const c=document.createElement('canvas');c.width=64;c.height=64;const g=c.getContext('2d');g.fillStyle='#8b97a3';g.fillRect(0,0,64,64);g.fillStyle='#2a4057';for(let y=6;y<60;y+=16)for(let x=6;x<60;x+=16)g.fillRect(x,y,8,10);g.fillStyle='#ffe9a8';g.fillRect(22,22,8,10);g.fillRect(38,38,8,10);return new THREE.CanvasTexture(c);})();
+const bld=[];for(let i=0;i<22;i++)for(const s of[-1,1]){const h=10+((i*13+(s>0?7:0))%5)*7,w=8+((i*5)%4)*2,t=wtex.clone();t.needsUpdate=true;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(Math.ceil(w/4),Math.ceil(h/4));
+const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,16),new THREE.MeshLambertMaterial({map:t,color:[0xcfd8e0,0xe8d9c4,0xb9c7d6,0xd9d0e4][(i+(s>0?1:0))%4]}));m.castShadow=true;m.visible=false;scene.add(m);bld.push([m,s,i,w,h]);}
+const clouds=[],cm=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.92,fog:false}),cg=new THREE.SphereGeometry(1,8,6);
+for(let i=0;i<16;i++){const g=new THREE.Group(),n=3+i%3;for(let k=0;k<n;k++){const s=new THREE.Mesh(cg,cm);s.scale.set(9+(k*2)%6+(i%4)*2,3.2+k%2,5+k%3);s.position.set((k-n/2)*8,(k%2)*1.2,(k%3)*2);g.add(s);}
+g.userData={x0:(i*97)%600,v:4+(i%5)*2,zo:200+(i%6)*40,y:60+(i%4)*14};scene.add(g);clouds.push(g);}
+function envUpdate(z){const bz=Math.floor(z/24)*24,t=performance.now()/1000;
+bld.forEach(([m,s,i,w,h])=>{const dz=bz-(i-4)*24;m.position.set(C(dz)+s*(11+w/2),h/2,dz);m.rotation.y=Math.atan(Cp(dz));m.visible=isUrban(dz);});
+clouds.forEach(c=>{const u=c.userData;c.position.set(C(z)+((u.x0+t*u.v)%600)-300,u.y,z-u.zo);});}
+const glassM=new THREE.MeshPhongMaterial({color:0x14303f,shininess:120,specular:0x99bbcc}),tireM=M(0x111417),rimM=new THREE.MeshPhongMaterial({color:0xcfd6dc,shininess:90}),darkM=M(0x1a1d21),chromeM=new THREE.MeshPhongMaterial({color:0xdfe6ea,shininess:120}),lampM=new THREE.MeshBasicMaterial({color:0xfff3c4}),glowM=new THREE.MeshBasicMaterial({color:0x35e6ff}),amberM=new THREE.MeshBasicMaterial({color:0xffa31a});
+const plateM=(()=>{const c=document.createElement('canvas');c.width=128;c.height=36;const g=c.getContext('2d');g.fillStyle='#f4f4f4';g.fillRect(0,0,128,36);g.strokeStyle='#222';g.lineWidth=3;g.strokeRect(2,2,124,32);g.fillStyle='#111';g.font='bold 24px Arial,sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText('KBS 1',64,19);return new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c)});})();
+const paint=c=>new THREE.MeshPhongMaterial({color:c,shininess:90,specular:0x666666});
+function taper(w,h,l,t,sh){const geo=new THREE.BoxGeometry(w,h,l),p=geo.attributes.position;for(let i=0;i<p.count;i++)if(p.getY(i)>0){p.setX(i,p.getX(i)*t);p.setZ(i,p.getZ(i)*t+sh);}geo.computeVertexNormals();return geo;}
+function buildInto2(g,s,c,lite){
+const P=paint(c),lights=[],wheels=[],bx=(w,h,l)=>new THREE.BoxGeometry(w,h,l);
+const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);g.add(m);return m;};
+const[bw,bh,bl,by]=s.b,[cw,chh,cl,cz,cy]=s.c,hz=bl/2,top=by+bh/2;
+add(bx(bw,bh,bl),P,0,by,0);add(bx(bw+.05,.14,bl+.05),darkM,0,by-bh/2+.02,0);
+if(s.n==='Truk'){add(bx(cw,chh,cl),P,0,cy,cz);add(bx(cw-.3,.75,.06),glassM,0,cy+.4,cz-cl/2-.01);[-1,1].forEach(k=>add(bx(.06,.6,cl*.55),glassM,k*(cw/2+.01),cy+.4,cz+.1));}
+else{add(taper(cw,chh,cl,.78,cl*.04),glassM,0,cy,cz);add(bx(cw*.78,.06,cl*.78),P,0,cy+chh/2+.02,cz+cl*.04);}
+const hx=bw*.34,ly=by+.12,red=new THREE.MeshBasicMaterial({color:0xd33a2c});
+[-hx,hx].forEach(x=>{add(bx(.4,.14,.06),lampM,x,ly,-hz-.01);lights.push(add(bx(.4,.14,.06),red.clone(),x,ly,hz+.01));});
+add(bx(bw*.46,.16,.06),darkM,0,by-.02,-hz-.02);
+[-1,1].forEach(k=>{add(bx(bw+.1,.18,.22),darkM,0,by-bh/2+.1,k*hz);if(s.n!=='Truk')add(bx(.12,.1,.2),P,k*(cw/2+.1),cy-chh*.2,cz-cl*.3);});
+if(s.n==='Pickup'){if(lite)add(bx(1.9,.55,1.9),darkM,0,1.1,1.45);else{add(bx(1.9,.08,1.9),darkM,0,.9,1.45);[-1,1].forEach(k=>add(bx(.08,.5,1.9),P,k*.95,1.15,1.45));add(bx(1.9,.5,.08),P,0,1.15,.5);add(bx(1.9,.5,.08),P,0,1.15,2.4);[-1,1].forEach(k=>add(new THREE.CylinderGeometry(.04,.04,.9,6),chromeM,k*.8,1.3,.65));add(new THREE.CylinderGeometry(.04,.04,1.6,6),chromeM,0,1.75,.65).rotation.z=Math.PI/2;add(bx(1.7,.08,.08),chromeM,0,.55,-hz-.1);}}
+if(!lite){add(new THREE.PlaneGeometry(.5,.14),plateM,0,by-.08,hz+.03);
+if(s.n==='Sedan'){[-1,1].forEach(k=>add(bx(.02,.04,bl*.8),chromeM,k*bw/2,top-.1,0));add(new THREE.CylinderGeometry(.015,.015,.5,5),darkM,.5,cy+chh/2+.25,cz+cl*.35);}
+if(s.n==='Truk'){add(bx(2.4,2.6,5),paint(0xeeeeee),0,2.5,1.4);for(let k=0;k<6;k++)add(bx(2.44,2.64,.06),paint(0xbfc7cc),0,2.5,-.9+k);for(let k=-2;k<=2;k++)add(bx(.25,.1,.1),amberM,k*.4,cy+chh/2+.06,cz-cl/2+.2);
+[-1,1].forEach(k=>{add(new THREE.CylinderGeometry(.08,.08,2.6,8),chromeM,k,cy+.2,cz+cl/2+.15);const t=add(new THREE.CylinderGeometry(.3,.3,1.4,10),chromeM,k*1.2,.8,-.6);t.rotation.x=Math.PI/2;});
+add(bx(1.4,.8,.06),chromeM,0,cy-.55,cz-cl/2-.02);add(bx(2.4,.4,.3),darkM,0,.6,-hz-.05);}
+if(s.n==='Mobil sport'){[-.2,.2].forEach(x=>add(bx(.16,.02,bl*.98),paint(0xf5f5f5),x,top+.01,0));add(taper(.5,.12,.7,.7,0),darkM,0,top+.06,-1.1);
+[-.6,.6].forEach(x=>add(bx(.06,.3,.06),darkM,x,top+.15,2));add(bx(1.7,.06,.45),paint(0x111111),0,top+.32,2);
+[-1,1].forEach(k=>{add(bx(.05,.12,bl*.6),darkM,k*bw/2,by-bh/2+.1,0);const e=add(new THREE.CylinderGeometry(.07,.07,.3,8),chromeM,k*.5,.3,hz);e.rotation.x=Math.PI/2;});add(bx(bw+.1,.04,.3),darkM,0,.15,-hz-.1);}
+if(s.n==='Hypercar'){[-1,1].forEach(k=>{add(bx(.06,.18,.8),darkM,k*(bw/2+.02),by+.05,.4);add(bx(.16,.32,1.3),P,k*(bw/2+.05),by+.05,1.45);add(bx(.05,.35,.55),paint(0x111111),k*1.1,top+.55,2.15);add(bx(.06,.45,.1),darkM,k*.5,top+.25,2.15);});
+add(bx(2.2,.06,.55),paint(0x111111),0,top+.5,2.15);add(bx(.22,.02,bl*.98),paint(0xf5f5f5),0,top+.01,0);add(bx(bw+.2,.05,.5),darkM,0,.15,-hz-.15);add(bx(1.6,.15,.5),darkM,0,.2,hz+.1);
+add(bx(bw-.1,.03,bl-.2),glowM,0,.09,0);lights.push(add(bx(bw*.8,.06,.05),red.clone(),0,top-.05,hz+.02));add(bx(bw*.8,.05,.05),lampM,0,top-.05,-hz-.02);}}
+s.w.forEach(([x,z])=>{const pv=new THREE.Group();pv.position.set(x,s.rw,z);
+const t=new THREE.Mesh(new THREE.CylinderGeometry(s.rw,s.rw,.3,lite?10:18),tireM);t.rotation.z=Math.PI/2;
+const rm=new THREE.Mesh(new THREE.CylinderGeometry(s.rw*.66,s.rw*.66,.32,lite?8:14),rimM);rm.rotation.z=Math.PI/2;pv.add(t,rm);
+if(!lite)for(let k=0;k<5;k++){const sp=new THREE.Mesh(bx(.34,s.rw*1.2,.045),darkM);sp.rotation.x=k*Math.PI/5;pv.add(sp);}
+g.add(pv);wheels.push(pv);});
+return{lights,wheels};}
+setCar(selCar);
+let lowQ=false;
+const Cc=h=>new THREE.Color(h),PAL={top:[Cc(0x050a18),Cc(0x35406e),Cc(0x2f78b8)],hor:[Cc(0x0e1a2e),Cc(0xf0a45e),Cc(0xbfe0ef)]},tmpA=new THREE.Color(),tmpB=new THREE.Color(),tmpC=new THREE.Color();
+const pal=(arr,d,out)=>d<.5?out.copy(arr[0]).lerp(arr[1],d*2):out.copy(arr[1]).lerp(arr[2],(d-.5)*2);
+const todS={p:.3,mode:0},hemi=scene.children.find(o=>o.isHemisphereLight),spot=new THREE.SpotLight(0xfff2cc,0,80,.5,.7,1),skyEl=$('#sky'),starEl=$('#stars');
+scene.add(spot,spot.target);
+starEl.style.backgroundImage=Array.from({length:70},(_,i)=>'radial-gradient(1.3px 1.3px at '+((i*61)%97+1)+'% '+((i*43)%97+1)+'%,#fff,rgba(255,255,255,0))').join(',');
+const lampHeadM=new THREE.MeshBasicMaterial({color:0x888888});
+posts.forEach(([p])=>{const h=new THREE.Mesh(new THREE.SphereGeometry(.18,8,6),lampHeadM);h.position.y=1.25;p.add(h);});
+const wlit=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,64,64);g.fillStyle='#ffd98a';[[22,6],[6,22],[38,22],[54,38],[22,54],[38,38]].forEach(([x,y])=>g.fillRect(x,y,8,10));return new THREE.CanvasTexture(c);})();
+bld.forEach(([m])=>{const t=wlit.clone();t.needsUpdate=true;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.copy(m.material.map.repeat);m.material.emissive=new THREE.Color(0xffffff);m.material.emissiveMap=t;m.material.emissiveIntensity=0;m.material.needsUpdate=true;});
+const mtn=new THREE.Group(),mm=new THREE.MeshBasicMaterial({color:0x7d9bb5,fog:false});
+for(let i=0;i<9;i++){const h=70+((i*37)%5)*28,r=120+((i*53)%4)*40,m=new THREE.Mesh(new THREE.ConeGeometry(r,h,6),mm);m.position.set((i-4)*190+((i*71)%60),h/2-5,0);mtn.add(m);}scene.add(mtn);
+const birds=[];for(let i=0;i<8;i++){const g=new THREE.Group(),wm=new THREE.MeshBasicMaterial({color:0x222222,side:THREE.DoubleSide}),w1=new THREE.Mesh(new THREE.PlaneGeometry(.9,.25),wm),w2=new THREE.Mesh(new THREE.PlaneGeometry(.9,.25),wm);w1.position.x=-.45;w2.position.x=.45;g.add(w1,w2);g.userData={w1,w2,i};scene.add(g);birds.push(g);}
+const peds=[],PC=[0xc0392b,0x2980b9,0x27ae60,0xf1c40f,0x8e44ad,0xecf0f1,0xe67e22];
+for(let j=0;j<14;j++){const g=new THREE.Group(),body=new THREE.Mesh(new THREE.CylinderGeometry(.2,.22,.75,8),M(PC[j%7])),head=new THREE.Mesh(new THREE.SphereGeometry(.15,8,6),M(0xe0b090));body.position.y=1.05;head.position.y=1.58;
+const legs=[-.1,.1].map(x=>{const l=new THREE.Mesh(new THREE.BoxGeometry(.14,.7,.16),M(0x2b3440));l.geometry.translate(0,-.35,0);l.position.set(x,.7,0);g.add(l);return l;});
+g.add(body,head);g.visible=false;scene.add(g);peds.push({g,legs,side:j%2?1:-1,spd:(j%3===0?-1:1)*(1+(j%3)*.25),lane:6.2+((j*3)%5)*.25});}
+const cross=[];for(let j=0;j<3;j++){const g=new THREE.Group();for(let k=-4;k<=4;k++){const m=flat(.5,3.2,0xf2f2f2,.035);m.position.set(k,.035,0);g.add(m);}g.visible=false;scene.add(g);cross.push(g);}
+let envT=performance.now()/1000,envF=19;
+function envUpdate2(z){const t=performance.now()/1000,dt=Math.min(.1,t-envT);envT=t;
+if(todS.mode===0)todS.p=(todS.p+dt/240)%1;
+const ang=todS.p*Math.PI*2,sn=Math.sin(ang),d=clamp(sn*1.2+.5,0,1);
+pal(PAL.hor,d,tmpA);scene.fog.color.copy(tmpA);
+hemi.intensity=.3+.8*d;hemi.color.set(0x445577).lerp(tmpB.set(0xddeeff),d);
+sun.intensity=.12+.98*clamp((d-.45)*2,0,1);sun.color.set(0xff9a55).lerp(tmpB.set(0xfff0d0),clamp((d-.5)*2,0,1));
+ground.material.color.set(0x0f2016).lerp(tmpB.set(0x4a8a4f),d);
+spot.intensity=clamp(1-d*1.6,0,1)*1.8;spot.position.set(C(z)+S.x,1,z-2);spot.target.position.set(C(z-30)+S.x,0,z-30);
+lampHeadM.color.set(0x888888).lerp(tmpB.set(0xffe08a),clamp(1-d*1.5,0,1));
+bld.forEach(([m])=>{m.material.emissiveIntensity=clamp(1-d*1.4,0,1)*.9;});
+mm.color.copy(tmpA).multiplyScalar(.72);mtn.position.set(C(z),0,z-520);
+cm.color.copy(tmpA).lerp(tmpB.set(0xffffff),.5*d+.3).multiplyScalar(.3+.7*d);
+starEl.style.opacity=clamp(.9-d*1.8,0,.9);
+envF++;if(envF%20===0){pal(PAL.top,d,tmpC);const hc='#'+tmpA.getHexString(),tc='#'+tmpC.getHexString(),mc='#'+tmpB.copy(tmpC).lerp(tmpA,.55).getHexString();
+const q=sn>=0?todS.p:(todS.p+.5)%1,el=Math.sin(q*Math.PI*2),sx=10+80*((q%.5)/.5),sy=46-34*el;
+const disc=sn>=0?'radial-gradient(circle at '+sx+'% '+sy+'%,#fffbe6 0,'+(el<.3?'#ffb060':'#ffe9a8')+' 2.5%,rgba(255,200,120,0) 11%)':'radial-gradient(circle at '+sx+'% '+sy+'%,#fff 0,#dfe8ff 1.8%,rgba(223,232,255,0) 6%)';
+skyEl.style.background=disc+',linear-gradient(180deg,'+tc+' 0%,'+mc+' 30%,'+hc+' 42%,'+hc+' 100%)';}
+trees.forEach(([tr,s,i])=>{tr.rotation.z=Math.sin(t*1.3+i)*.035;});
+birds.forEach(b=>{const i=b.userData.i,a=t*.25+i*1.7,bz2=z-160-i*18;b.visible=d>.4&&!lowQ;b.position.set(C(bz2)+Math.sin(a)*70,22+i*3+Math.sin(t+i)*2,bz2+Math.cos(a)*40);b.rotation.y=a;b.userData.w1.rotation.z=Math.sin(t*9+i)*.7;b.userData.w2.rotation.z=-Math.sin(t*9+i)*.7;});
+const pz2=Math.floor(z/30)*30;
+peds.forEach((p,j)=>{const base=pz2-(Math.floor(j/2)-3)*30,ph=t*.12*p.spd+j,dz=base+15+12*Math.sin(ph);p.g.visible=!lowQ&&isUrban(dz);p.g.position.set(C(dz)+p.side*p.lane,0,dz);p.g.rotation.y=Math.cos(ph)*p.spd>0?0:Math.PI;const sw=Math.sin(t*8+j)*.6;p.legs[0].rotation.x=sw;p.legs[1].rotation.x=-sw;});
+const cz4=Math.floor(z/120)*120;cross.forEach((g,j)=>{const dz=cz4-(j-1)*120+60;g.position.set(C(dz),0,dz);g.rotation.y=Math.atan(Cp(dz));g.visible=isUrban(dz);});}
+$('#bt').onclick=e=>{todS.mode=(todS.mode+1)%4;if(todS.mode)todS.p=[0,.25,.49,.75][todS.mode];e.target.textContent='Waktu: '+['otomatis','siang','sore','malam'][todS.mode];envF=19;};
+$('#bq').onclick=e=>{lowQ=!lowQ;e.target.textContent='Grafis: '+(lowQ?'rendah':'tinggi');sun.castShadow=!lowQ;renderer.setPixelRatio(lowQ?1:Math.min(devicePixelRatio,2));resize();};
+let setRun=false;
+function toggleSettings(force){const el=$('#settings'),open=force!==undefined?force:el.style.display==='none';
+if(open){setRun=running;running=false;el.style.display='block';}else{el.style.display='none';if(setRun)running=true;setRun=false;}}
+$('#gear').onclick=()=>toggleSettings();$('#bx').onclick=()=>toggleSettings(false);
+['#bm','#bz','#bh'].forEach(s=>$(s).addEventListener('click',()=>{$('#settings').style.display='none';setRun=false;}));
+$('#bst').onclick=e=>{const h=$('#stats').style.display==='none';$('#stats').style.display=h?'':'none';e.target.textContent='Statistik: '+(h?'tampil':'sembunyi');};
+if(!('ontouchstart' in window)&&!navigator.maxTouchPoints)$('#steer').style.display='none';
+const gc=$('#gauges').getContext('2d');
+function gauge(cx,cy,r,val,max,stepv,div,red,unit,txt){const g=gc,a0=Math.PI*.75,sw=Math.PI*1.5;
+g.lineWidth=6;g.strokeStyle='#22343f';g.beginPath();g.arc(cx,cy,r,a0,a0+sw);g.stroke();
+if(red){g.strokeStyle='#ff5a4d';g.beginPath();g.arc(cx,cy,r,a0+sw*red/max,a0+sw);g.stroke();}
+g.fillStyle='#8fa6b3';g.font='600 13px "Barlow Condensed",sans-serif';g.textAlign='center';g.textBaseline='middle';
+for(let v=0;v<=max;v+=stepv){const a=a0+sw*v/max;g.fillText(v/div,cx+Math.cos(a)*(r-18),cy+Math.sin(a)*(r-18));}
+const a=a0+sw*Math.min(val,max)/max;
+g.strokeStyle='#ffb000';g.lineWidth=3;g.beginPath();g.moveTo(cx,cy);g.lineTo(cx+Math.cos(a)*(r-6),cy+Math.sin(a)*(r-6));g.stroke();
+g.fillStyle='#e8f0f4';g.font='700 24px "Barlow Condensed",sans-serif';g.fillText(txt,cx,cy+36);
+g.fillStyle='#8fa6b3';g.font='500 12px "Barlow Condensed",sans-serif';g.fillText(unit,cx,cy+54);}
+const grid=$('#grid'),cells={};
+[[1,'1'],[3,'3'],[5,'5'],[2,'2'],[4,'4'],[-1,'R']].forEach(([g,l])=>{const b=document.createElement('button');b.className='gc';b.textContent=l;b.onclick=()=>{audioInit();setGear(g);};grid.appendChild(b);cells[g]=b;});
+cells[0]=$('#gn');cells[0].onclick=()=>setGear(0);
+const fills=[...document.querySelectorAll('.pedal')].reduce((o,p)=>(o[p.dataset.k]=p.querySelector('.fill'),o),{});
+let lis=[...document.querySelectorAll('#lessons li')];
+
+function render(){
+const z=S.z,bz=Math.floor(z/8)*8,pz=Math.floor(z/20)*20,tz=Math.floor(z/17)*17;
+ground.position.set(C(z),0,z);setRib(road,0,z+40,z-300,.02);edges.forEach(e=>setRib(e,e.userData.x,z+40,z-300,e.userData.y));
+dashes.forEach((d,i)=>{const dz=bz-(i-6)*8;d.position.set(C(dz),.04,dz);d.rotation.y=Math.atan(Cp(dz));d.visible=!inNoOv(dz);});
+posts.forEach(([p,s,i])=>{const dz=pz-(i-5)*20;p.position.set(C(dz)+s*5.6,1.2,dz);});
+trees.forEach(([t,s,i])=>{const dz=tz-(i-6)*17+(s>0?6:0);t.position.set(C(dz)+s*(9+((i*5)%7)*1.6),0,dz);t.visible=!isUrban(dz);});
+car.position.set(C(z)+S.x,0,z);car.rotation.x=S.pitch;car.rotation.y=S.yaw+Math.atan(Cp(z));sun.position.set(C(z)+S.x-10,18,z+8);sun.target.position.set(C(z)+S.x,0,z);envUpdate(z);envUpdate2(z);
+const br=brake>.1;tl.forEach(m=>m.material.color.set(br?0xff3b30:0x5a1511));
+shake*=.94;const tm=performance.now()/1000,sh=reduce?0:shake*shake*.25,nx=Math.sin(tm*37)*sh,ny=Math.sin(tm*29+1)*sh;
+const kp=Math.abs(S.v)*3.6;camX+=(S.x*.8-camX)*.12;const tf=60+clamp(kp*.2,0,16);cam.fov+=(tf-cam.fov)*.08;cam.updateProjectionMatrix();
+if(camMode){car.visible=false;cam.position.set(C(z)+S.x+nx,CP.ch+ny,z-.3);cam.lookAt(C(z-12)+S.x,CP.ch-.1,z-12);}else{car.visible=true;cam.position.set(C(z+CP.cz)+camX+nx,CP.cy+ny,z+CP.cz);cam.lookAt(C(z-8)+camX,1.8,z-8);}
+renderer.render(scene,cam);
+gc.setTransform(2,0,0,2,0,0);gc.clearRect(0,0,340,170);
+gauge(85,84,70,S.rpm,8000,1000,1000,6500,'x1000 RPM',Math.round(S.rpm/10)*10+'');
+gauge(255,84,70,Math.abs(S.v)*3.6,CP.vmax,CP.vs,1,0,'km/jam',Math.round(Math.abs(S.v)*3.6)+'');
+const GL=S.gear<0?'R':S.gear===0?'N':S.gear;gc.fillStyle='#ffb000';gc.font='700 34px "Barlow Condensed",sans-serif';gc.textAlign='center';gc.fillText(GL,170,84);
+if(S.on&&S.gear>0&&S.gear<5&&S.rpm>3500){gc.font='700 15px "Barlow Condensed",sans-serif';gc.fillText('NAIK GIGI',85,12);}
+for(const k in fills)fills[k].style.height=((k==='gas'?gas:k==='brake'?brake:clutch)*100)+'%';
+for(const g in cells)cells[g].classList.toggle('act',+g===S.gear);
+lis.forEach((l,i)=>l.classList.toggle('done',!!S.done[i]));
+const e=$('#engine');e.textContent=S.on?'Mesin hidup':'Mesin mati';e.className=S.on?'on':'off';
+$('#sStall').textContent=S.stalls;$('#sGrind').textContent=S.grinds;$('#sShift').textContent=S.shifts;$('#sHit').textContent=S.hits;$('#sViol').textContent=S.viol;$('#sOver').textContent=S.over;fxEl.style.opacity=clamp(Math.abs(S.v)*3.6/110,0,.85);
+}
+
+addEventListener('keydown',e=>{audioInit();const k=e.key.toLowerCase();keys[k]=true;if(k==='escape'&&!e.repeat&&$('#menu').style.display==='none'&&$('#result').style.display==='none'&&$('#intro').style.display==='none')toggleSettings();
+if([' ','arrowup','arrowdown','arrowleft','arrowright'].includes(k))e.preventDefault();
+if(!running||e.repeat)return;
+if(k==='e')start();else if(k==='c')camMode^=1;else if(k==='0')setGear(0);else if(k==='r')setGear(-1);else if('12345'.includes(k)&&k.length===1)setGear(+k);});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
+document.querySelectorAll('.pedal').forEach(p=>{const k=p.dataset.k;
+const set=e=>{const b=p.getBoundingClientRect();ptr[k]=clamp((e.clientY-b.top)/b.height,0,1);};
+p.addEventListener('pointerdown',e=>{audioInit();p.setPointerCapture(e.pointerId);set(e);});
+p.addEventListener('pointermove',e=>{if(ptr[k]!==null)set(e);});
+['pointerup','pointercancel'].forEach(t=>p.addEventListener(t,()=>ptr[k]=null));});
+[['#bl','a'],['#br','d']].forEach(([s,k])=>{const b=$(s);b.addEventListener('pointerdown',()=>keys[k]=true);['pointerup','pointerleave','pointercancel'].forEach(t=>b.addEventListener(t,()=>keys[k]=false));});
+$('#starter')?.addEventListener('click',start);
+$('#go').onclick=()=>{$('#intro').style.display='none';running=true;audioInit();msg('Tahan kopling (Shift), lalu tekan E untuk starter.');};
+$('#bh').onclick=()=>{$('#intro').style.display='flex';running=false;};
+$('#bz').onclick=()=>startMode(mode,qi);$('#bm').onclick=showMenu;
+$('#bs').onclick=e=>{muted=!muted;e.target.textContent='Suara: '+(muted?'mati':'nyala');};
+function resize(){renderer.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix();}
+addEventListener('resize',resize);resize();
+let last=performance.now();
+function loop(now){const rd=Math.min(.05,(now-last)/1000);last=now;let dt=rd;if(hs>0){hs-=rd;dt=rd*.05;}if(running)step(dt);render();requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
